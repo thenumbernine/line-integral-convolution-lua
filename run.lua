@@ -29,11 +29,16 @@ function App:initGL(...)
 	self.view.ortho = true 
 	self.view.orthoSize = 1
 
-	self.size = 256
-	--self.size = 1024
+	--self.size = 128
+	--self.size = 256
+	--self.size = 512
+	self.size = 1024
 	local image = Image(self.size, self.size, 4, 'float')
-	for i=0,self.size*self.size*4-1 do
-		image.buffer[i] = math.random()
+	for i=0,self.size*self.size-1 do
+		local l = math.floor(math.random(0,3)/3)
+		for j=0,3 do
+			image.buffer[j+4*i] = l
+		end
 	end
 	self.state = GLPingPong{
 		internalFormat = gl.GL_RGBA32F,
@@ -53,13 +58,16 @@ function App:initGL(...)
 		format = gl.GL_RGBA,
 		type = gl.GL_FLOAT,
 		data = image.buffer,
-		numBuffers = 10,
+		numBuffers = 1,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
 	}
 	for i=1,#self.random.hist do
-		for i=0,self.size*self.size*4-1 do
-			image.buffer[i] = math.random()
+		for i=0,self.size*self.size-1 do
+			local l = math.floor(math.random(0,3)/3)
+			for j=0,3 do
+				image.buffer[j+4*i] = l
+			end
 		end
 		local tex = self.random.hist[i]
 		tex:bind()
@@ -87,7 +95,8 @@ function App:initGL(...)
 	}
 
 
-	local theta = math.rad(.5)
+	local theta = math.rad(.1)
+	local blendCoeff = .01
 	self.updateShader = GLProgram{
 		vertexCode = [[
 varying vec2 tc;
@@ -112,8 +121,8 @@ void main() {
 	vec2 src = tc + vec2(.01, .005);
 #endif
 	vec4 colorThere = texture2D(stateTex, src);
-	gl_FragColor = mix(colorHere, colorThere, .9);
-	
+	gl_FragColor = mix(colorThere, colorHere, <?=clnumber(blendCoeff)?>);
+
 	//vec4 greyscale = vec4(.3, .6, .1, 0.);
 	//float l = dot(greyscale, gl_FragColor);
 	//gl_FragColor = vec4(l, l, l, 1.);
@@ -121,6 +130,7 @@ void main() {
 ]],			{
 				clnumber = clnumber,
 				theta = theta,
+				blendCoeff = blendCoeff,
 			}),
 		uniforms = {
 			stateTex = 0,
