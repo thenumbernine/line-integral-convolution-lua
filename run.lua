@@ -115,10 +115,35 @@ void main() {
 varying vec2 tc;
 uniform sampler2D noiseTex;
 
-#if 1	//rotation
+#if 0	//rotation
 vec2 field(vec2 x) {
 	x -= vec2(.5, .5);
 	return vec2(-x.y, x.x);
+}
+#elif 1	//dipole
+float cube(float x) {
+	return x * x * x;
+}
+vec2 EField(vec2 x) {
+	return x / cube(length(x));
+}
+vec2 field(vec2 x) {
+	x *= 2.; x -= 1.; x *= 2.;
+	//one in the middle
+	//return EField(x - vec2(.5, .5));	// one charge in the middle
+	//n along a unit circle
+	vec2 E = vec2(0,0);
+<? 
+local n = 6
+for i=0,n-1 do
+	local q = i%2==0 and 1 or -1
+	local theta = 2*math.pi*i/n
+	local cx = math.cos(theta)
+	local cy = math.sin(theta)
+?>	E += <?=clnumber(q)?> * EField(x - vec2(<?=clnumber(cx)?>, <?=clnumber(cy)?>));
+<?
+end
+?>	return E;
 }
 #else	//linear
 vec2 field(vec2 x) {
