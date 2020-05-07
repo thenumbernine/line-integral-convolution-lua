@@ -10,6 +10,7 @@ local glreport = require 'gl.report'
 local GLTex2D = require 'gl.tex2d'
 local GLArrayBuffer = require 'gl.arraybuffer'
 local GLAttribute = require 'gl.attribute'
+local GLVertexArray = require 'gl.vertexarray'
 local GLProgram = require 'gl.program'
 local GLPingPong = require 'gl.pingpong'
 local clnumber = require 'cl.obj.number'
@@ -98,7 +99,6 @@ function App:initGL(...)
 		type = gl.GL_FLOAT,
 	}
 
-
 	self.updateShader = GLProgram{
 		vertexCode = [[
 #version 460
@@ -179,7 +179,20 @@ void main() {
 			noiseTex = 0,
 		},
 	}
-	
+
+-- [[ 
+-- so lemme get this straight, VertexArrayObjects just bind Buffers to Shader Attributes one time up front, so you don't have to constantly keep re-binding them upon draw?
+-- why not just remember what's bound the first time, and remove the need for this?
+	self.updateShaderVtxVertexArray = GLVertexArray{
+		buffer = self.vtxBuffer,
+		size = self.vtxBufferDim,
+		type = gl.GL_FLOAT,
+	}
+	self.updateShaderVtxVertexArray:bind()
+	self.updateShader:setAttr('vtx', self.updateShaderVtxVertexArray)
+	self.updateShaderVtxVertexArray:unbind()
+--]]
+
 
 	self.drawShader = GLProgram{
 		vertexCode = [[
@@ -207,6 +220,17 @@ void main() {
 		},
 	}
 
+-- [[ more VAO stuff
+	self.drawShaderVtxVertexArray = GLVertexArray{
+		buffer = self.vtxBuffer,
+		size = self.vtxBufferDim,
+		type = gl.GL_FLOAT,
+	}
+	self.drawShaderVtxVertexArray:bind()
+	self.drawShader:setAttr('vtx', self.drawShaderVtxVertexArray)
+	self.drawShaderVtxVertexArray:unbind()
+--]]
+
 	self.modelViewMatrix = matrix_ffi.zeros(4,4)
 	self.projectionMatrix = matrix_ffi.zeros(4,4)
 	self.modelViewProjectionMatrix = matrix_ffi.zeros(4,4)
@@ -230,9 +254,11 @@ function App:update()
 			gl.glUniformMatrix4fv(self.updateShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.projectionMatrix.ptr)	-- modelview is ident, so just use projection
 			self.noise:prev():bind()
 			
-			self.updateShader:setAttr('vtx', self.vtxAttr)
+			--self.updateShader:setAttr('vtx', self.vtxAttr)
+			self.updateShaderVtxVertexArray:bind()
 			gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-			self.updateShader:unsetAttr'vtx'
+			self.updateShaderVtxVertexArray:unbind()
+			--self.updateShader:unsetAttr'vtx'
 
 			self.noise:prev():unbind()
 			self.updateShader:useNone()
@@ -249,9 +275,11 @@ function App:update()
 	self.drawShader:use()
 	gl.glUniformMatrix4fv(self.drawShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.modelViewProjectionMatrix.ptr)
 	self.state:prev():bind()
-	self.drawShader:setAttr('vtx', self.vtxAttr)
+	--self.drawShader:setAttr('vtx', self.vtxAttr)
+	self.drawShaderVtxVertexArray:bind()
 	gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-	self.drawShader:unsetAttr'vtx'
+	self.drawShaderVtxVertexArray:unbind()
+	--self.drawShader:unsetAttr'vtx'
 	self.drawShader:useNone()
 glreport'here'
 end
