@@ -27,7 +27,8 @@ function App:initGL(...)
 	App.super.initGL(self, ...)
 
 	self.view.ortho = true 
-	self.view.orthoSize = 1
+	self.view.orthoSize = .5
+	self.view.pos:set(.5, .5, 10)
 
 	--self.size = 128
 	--self.size = 256
@@ -100,20 +101,19 @@ function App:initGL(...)
 
 	self.updateShader = GLProgram{
 		vertexCode = [[
+#version 460
+attribute vec2 vtx;
 varying vec2 tc;
+uniform mat4 modelViewProjectionMatrix;
 void main() {
-	tc = gl_Vertex.xy;
-	gl_Position = gl_ProjectionMatrix * gl_Vertex;
+	tc = vtx.xy;
+	gl_Position = modelViewProjectionMatrix * vec4(vtx, 0., 1.);
 }
 ]],
 		fragmentCode = template([[
+#version 460
 varying vec2 tc;
 uniform sampler2D noiseTex;
-uniform sampler2D stateTex;
-
-#if 0	//previous buffer influence?
-uniform float blendCoeff;
-#endif
 
 #if 1	//rotation
 vec2 field(vec2 x) {
@@ -126,23 +126,24 @@ vec2 field(vec2 x) {
 }
 #endif
 
+out vec4 fragColor;
 void main() {
-	vec2 r = tc;
-	float l = 0.;//texture2D(noiseTex, r).r;
-	for (int iter = 0; iter < <?=maxiter?>; ++iter) {
-		float f = float(iter + 1) * <?=clnumber(1/(maxiter+1))?>;
-		float k = smoothstep(0., .3, f) - smoothstep(.7, 1., f);
-		vec2 dr_ds = normalize(field(r));
-		r += dr_ds * <?=ds?>;
-		l += texture2D(noiseTex, r).r;
-	}
-	l *= <?=clnumber(1/maxiter)?>;
+	float l = texture2D(noiseTex, tc).r;
+
+	<? for dir=-1,1,2 do ?>{
+		vec2 r  = tc;
+		for (int iter = 0; iter < <?=maxiter?>; ++iter) {
+			float f = float(iter + 1) * <?=clnumber(1/(maxiter+1))?>;
+			float k = smoothstep(1, 0, f);
+			vec2 dr_ds = normalize(field(r));
+			r += dr_ds * <?=ds * dir?>;
+			l += texture2D(noiseTex, r).r;
+		}
+	}<? end ?>
+
+	l *= <?=clnumber(1/(2*maxiter+1))?>;
 	
-#if 0	//previous buffer influence?
-	float srcl = texture2D(stateTex, tc).r;
-	l = mix(l, srcl, blendCoeff);
-#endif	
-	gl_FragColor = vec4(l,l,l, 1.);
+	fragColor = vec4(l,l,l, 1.);
 }
 ]],			{
 				clnumber = clnumber,
@@ -151,8 +152,6 @@ void main() {
 			}),
 		uniforms = {
 			noiseTex = 0,
-			stateTex = 1,
-			blendCoeff = .5,
 		},
 	}
 	
@@ -165,8 +164,7 @@ varying vec2 tc;
 uniform mat4 modelViewProjectionMatrix;
 void main() {
 	tc = vtx.xy;
-	vec4 v = vec4(vtx.xy * 2. - 1., 0., 1.);
-	gl_Position = modelViewProjectionMatrix * v;
+	gl_Position = modelViewProjectionMatrix * vec4(vtx.xy, 0., 1.);
 }
 ]],
 		fragmentCode = [[
@@ -199,13 +197,20 @@ function App:update()
 	self.state:draw{
 		viewport = {0, 0, self.size, self.size},
 		resetProjection = true,
-		dest = self.state:cur(),
-		texs = {self.noise:prev(), self.state:prev()},
-		shader = self.updateShader,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
-			-- TODO use buffered geometry here.   and saved matrices.  just because.
-			self.state.fbo.drawScreenQuad()
+			
+			gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projectionMatrix.ptr)
+			self.updateShader:use()
+			gl.glUniformMatrix4fv(self.updateShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.projectionMatrix.ptr)	-- modelview is ident, so just use projection
+			self.noise:prev():bind()
+			
+			self.updateShader:setAttr('vtx', self.vtxAttr)
+			gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
+			self.updateShader:unsetAttr'vtx'
+
+			self.noise:prev():unbind()
+			self.updateShader:useNone()
 		end,
 	}
 	self.state:swap()
