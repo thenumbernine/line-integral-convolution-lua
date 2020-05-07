@@ -31,13 +31,13 @@ function App:initGL(...)
 
 	--self.size = 128
 	--self.size = 256
-	--self.size = 512
-	self.size = 1024
+	self.size = 512
+	--self.size = 1024
 	local image = Image(self.size, self.size, 4, 'float')
 	for i=0,self.size*self.size-1 do
-		local l = math.floor(math.random(0,3)/3)
+		--local l = math.floor(math.random(0,3)/3)
 		for j=0,3 do
-			image.buffer[j+4*i] = l
+			image.buffer[j+4*i] = 1
 		end
 	end
 	self.state = GLPingPong{
@@ -49,27 +49,30 @@ function App:initGL(...)
 		data = image.buffer,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
+		-- no need for pingpong -- no state needed
+		numBuffers = 1,
 	}
 
-	self.random = GLPingPong{
+	self.noise = GLPingPong{
 		internalFormat = gl.GL_RGBA32F,
 		width = self.size,
 		height = self.size,
 		format = gl.GL_RGBA,
 		type = gl.GL_FLOAT,
 		data = image.buffer,
-		numBuffers = 1,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
+		-- set this to 1 for a static image
+		numBuffers = 1,
 	}
-	for i=1,#self.random.hist do
+	for i=1,#self.noise.hist do
 		for i=0,self.size*self.size-1 do
 			local l = math.floor(math.random(0,3)/3)
 			for j=0,3 do
 				image.buffer[j+4*i] = l
 			end
 		end
-		local tex = self.random.hist[i]
+		local tex = self.noise.hist[i]
 		tex:bind()
 		tex:subimage{data = image.buffer}
 		tex:unbind()
@@ -95,8 +98,6 @@ function App:initGL(...)
 	}
 
 
-	local theta = math.rad(.1)
-	local blendCoeff = .01
 	self.updateShader = GLProgram{
 		vertexCode = [[
 varying vec2 tc;
@@ -107,34 +108,51 @@ void main() {
 ]],
 		fragmentCode = template([[
 varying vec2 tc;
-uniform sampler2D randomTex;
+uniform sampler2D noiseTex;
 uniform sampler2D stateTex;
-void main() {
-	vec4 colorHere = texture2D(randomTex, tc);
 
-#if 1
-	vec2 src = tc - vec2(.5, .5);
-	vec2 rot = vec2(<?=clnumber(math.cos(theta))?>, <?=clnumber(math.sin(theta))?>);
-	src = vec2(src.x * rot.x - src.y * rot.y, src.x * rot.y + src.y * rot.x);
-	src += vec2(.5, .5);
-#else
-	vec2 src = tc + vec2(.01, .005);
+#if 0	//previous buffer influence?
+uniform float blendCoeff;
 #endif
-	vec4 colorThere = texture2D(stateTex, src);
-	gl_FragColor = mix(colorThere, colorHere, <?=clnumber(blendCoeff)?>);
 
-	//vec4 greyscale = vec4(.3, .6, .1, 0.);
-	//float l = dot(greyscale, gl_FragColor);
-	//gl_FragColor = vec4(l, l, l, 1.);
+#if 1	//rotation
+vec2 field(vec2 x) {
+	x -= vec2(.5, .5);
+	return vec2(-x.y, x.x);
+}
+#else	//linear
+vec2 field(vec2 x) {
+	return vec2(.01, .005);
+}
+#endif
+
+void main() {
+	vec2 r = tc;
+	float l = 0.;//texture2D(noiseTex, r).r;
+	for (int iter = 0; iter < <?=maxiter?>; ++iter) {
+		float f = float(iter + 1) * <?=clnumber(1/(maxiter+1))?>;
+		float k = smoothstep(0., .3, f) - smoothstep(.7, 1., f);
+		vec2 dr_ds = normalize(field(r));
+		r += dr_ds * <?=ds?>;
+		l += texture2D(noiseTex, r).r;
+	}
+	l *= <?=clnumber(1/maxiter)?>;
+	
+#if 0	//previous buffer influence?
+	float srcl = texture2D(stateTex, tc).r;
+	l = mix(l, srcl, blendCoeff);
+#endif	
+	gl_FragColor = vec4(l,l,l, 1.);
 }
 ]],			{
 				clnumber = clnumber,
-				theta = theta,
-				blendCoeff = blendCoeff,
+				ds = clnumber(1 / self.size),
+				maxiter = 9,
 			}),
 		uniforms = {
-			stateTex = 0,
-			randomTex = 1,
+			noiseTex = 0,
+			stateTex = 1,
+			blendCoeff = .5,
 		},
 	}
 	
@@ -157,7 +175,8 @@ varying vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
 void main() {
-	fragColor = texture2D(stateTex, tc);
+	float l = texture2D(stateTex, tc).r;
+	fragColor = vec4(l, l, l, 1.);
 }
 ]],
 		uniforms = {
@@ -181,7 +200,7 @@ function App:update()
 		viewport = {0, 0, self.size, self.size},
 		resetProjection = true,
 		dest = self.state:cur(),
-		texs = {self.state:prev(), self.random:prev()},
+		texs = {self.noise:prev(), self.state:prev()},
 		shader = self.updateShader,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
@@ -190,7 +209,7 @@ function App:update()
 		end,
 	}
 	self.state:swap()
-	self.random:swap()
+	self.noise:swap()
 	gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 
 	gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX, self.modelViewMatrix.ptr)
