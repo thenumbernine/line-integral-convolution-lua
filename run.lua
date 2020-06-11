@@ -31,44 +31,37 @@ function App:initGL(...)
 	self.view.orthoSize = .5
 	self.view.pos:set(.5, .5, 10)
 
-	--self.size = 128
-	--self.size = 256
-	self.size = 512
-	--self.size = 1024
-	local image = Image(self.size, self.size, 4, 'float')
-	for i=0,self.size*self.size-1 do
-		--local l = math.floor(math.random(0,3)/3)
-		for j=0,3 do
-			image.buffer[j+4*i] = 1
-		end
-	end
+	self.stateSize = 1024
 	self.state = GLPingPong{
 		internalFormat = gl.GL_RGBA32F,
-		width = self.size,
-		height = self.size,
+		width = self.stateSize,
+		height = self.stateSize,
 		format = gl.GL_RGBA,
 		type = gl.GL_FLOAT,
-		data = image.buffer,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
 		-- no need for pingpong -- no state needed
 		numBuffers = 1,
 	}
 
+	--self.noiseSize = 128
+	self.noiseSize = 256
+	--self.noiseSize = 512
+	--self.noiseSize = 1024
 	self.noise = GLPingPong{
 		internalFormat = gl.GL_RGBA32F,
-		width = self.size,
-		height = self.size,
+		width = self.noiseSize,
+		height = self.noiseSize,
 		format = gl.GL_RGBA,
 		type = gl.GL_FLOAT,
-		data = image.buffer,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
 		-- set this to 1 for a static image
 		numBuffers = 1,
 	}
+	local image = Image(self.noiseSize, self.noiseSize, 4, 'float')
 	for i=1,#self.noise.hist do
-		for i=0,self.size*self.size-1 do
+		for i=0,self.noiseSize*self.noiseSize-1 do
 			local l = math.floor(math.random(0,3)/3)
 			for j=0,3 do
 				image.buffer[j+4*i] = l
@@ -88,16 +81,7 @@ function App:initGL(...)
 		1, 1,
 	}
 	self.vtxBufferCount = #vtxs / self.vtxBufferDim
-	self.vtxBuffer = GLArrayBuffer{
-		size = self.vtxBufferDim * self.vtxBufferCount * ffi.sizeof'float',
-		data = vtxs,
-		usage = gl.GL_STATIC_DRAW,
-	}
-	self.vtxAttr = GLAttribute{
-		buffer = self.vtxBuffer,
-		size = self.vtxBufferDim,
-		type = gl.GL_FLOAT,
-	}
+	self.vtxBuffer = GLArrayBuffer{data = vtxs}
 
 	self.updateShader = GLProgram{
 		vertexCode = [[
@@ -167,12 +151,15 @@ void main() {
 	}<? end ?>
 
 	l *= <?=clnumber(1/(2*maxiter+1))?>;
-	
+
+	//add some contract
+	l = smoothstep(-.1, .8, l);
+
 	fragColor = vec4(l,l,l, 1.);
 }
 ]],			{
 				clnumber = clnumber,
-				ds = clnumber(1 / self.size),
+				ds = clnumber(1 / self.noiseSize),
 				maxiter = 9,
 			}),
 		uniforms = {
@@ -180,18 +167,16 @@ void main() {
 		},
 	}
 
--- [[ 
--- so lemme get this straight, VertexArrayObjects just bind Buffers to Shader Attributes one time up front, so you don't have to constantly keep re-binding them upon draw?
--- why not just remember what's bound the first time, and remove the need for this?
-	self.updateShaderVtxVertexArray = GLVertexArray{
-		buffer = self.vtxBuffer,
+	self.updateShaderVtxAttr = GLAttribute{
 		size = self.vtxBufferDim,
 		type = gl.GL_FLOAT,
+		loc = self.updateShader.attrs.vtx.loc,
+		buffer = self.vtxBuffer,
 	}
-	self.updateShaderVtxVertexArray:bind()
-	self.updateShader:setAttr('vtx', self.updateShaderVtxVertexArray)
-	self.updateShaderVtxVertexArray:unbind()
---]]
+
+	self.updateShaderVertexArray = GLVertexArray{
+		self.updateShaderVtxAttr,
+	}
 
 
 	self.drawShader = GLProgram{
@@ -220,16 +205,17 @@ void main() {
 		},
 	}
 
--- [[ more VAO stuff
-	self.drawShaderVtxVertexArray = GLVertexArray{
-		buffer = self.vtxBuffer,
+	self.drawShaderVtxAttr = GLAttribute{
 		size = self.vtxBufferDim,
 		type = gl.GL_FLOAT,
+		loc = self.drawShader.attrs.vtx.loc,
+		buffer = self.vtxBuffer,
 	}
-	self.drawShaderVtxVertexArray:bind()
-	self.drawShader:setAttr('vtx', self.drawShaderVtxVertexArray)
-	self.drawShaderVtxVertexArray:unbind()
---]]
+
+	self.drawShaderVertexArray = GLVertexArray{
+		self.drawShaderVtxAttr,
+	}
+
 
 	self.modelViewMatrix = matrix_ffi.zeros(4,4)
 	self.projectionMatrix = matrix_ffi.zeros(4,4)
@@ -244,7 +230,7 @@ function App:update()
 	App.super.update(self)
 
 	self.state:draw{
-		viewport = {0, 0, self.size, self.size},
+		viewport = {0, 0, self.stateSize, self.stateSize},
 		resetProjection = true,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
@@ -254,11 +240,9 @@ function App:update()
 			gl.glUniformMatrix4fv(self.updateShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.projectionMatrix.ptr)	-- modelview is ident, so just use projection
 			self.noise:prev():bind()
 			
-			--self.updateShader:setAttr('vtx', self.vtxAttr)
-			self.updateShaderVtxVertexArray:bind()
+			self.updateShaderVertexArray:bind()
 			gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-			self.updateShaderVtxVertexArray:unbind()
-			--self.updateShader:unsetAttr'vtx'
+			self.updateShaderVertexArray:unbind()
 
 			self.noise:prev():unbind()
 			self.updateShader:useNone()
@@ -275,11 +259,11 @@ function App:update()
 	self.drawShader:use()
 	gl.glUniformMatrix4fv(self.drawShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.modelViewProjectionMatrix.ptr)
 	self.state:prev():bind()
-	--self.drawShader:setAttr('vtx', self.vtxAttr)
-	self.drawShaderVtxVertexArray:bind()
+	
+	self.drawShaderVertexArray:bind()
 	gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-	self.drawShaderVtxVertexArray:unbind()
-	--self.drawShader:unsetAttr'vtx'
+	self.drawShaderVertexArray:unbind()
+	
 	self.drawShader:useNone()
 glreport'here'
 end
