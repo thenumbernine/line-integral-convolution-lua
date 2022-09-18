@@ -15,12 +15,10 @@ local GLProgram = require 'gl.program'
 local GLPingPong = require 'gl.pingpong'
 local clnumber = require 'cl.obj.number'
 local Image = require 'image'
-local ImGuiApp = require 'imguiapp'
 
 matrix_ffi.real = 'float'
 
-
-local App = require 'glapp.orbit'(ImGuiApp)
+local App = require 'imguiapp.withorbit'()
 
 App.title = 'LIC'
 
@@ -162,20 +160,14 @@ void main() {
 				ds = clnumber(1 / self.noiseSize),
 				maxiter = 9,
 			}),
+		
 		uniforms = {
 			noiseTex = 0,
 		},
-	}
 
-	self.updateShaderVtxAttr = GLAttribute{
-		size = self.vtxBufferDim,
-		type = gl.GL_FLOAT,
-		loc = self.updateShader.attrs.vtx.loc,
-		buffer = self.vtxBuffer,
-	}
-
-	self.updateShaderVertexArray = GLVertexArray{
-		self.updateShaderVtxAttr,
+		attrs = {
+			vtx = self.vtxBuffer,
+		},
 	}
 
 
@@ -203,17 +195,10 @@ void main() {
 		uniforms = {
 			stateTex = 0,
 		},
-	}
-
-	self.drawShaderVtxAttr = GLAttribute{
-		size = self.vtxBufferDim,
-		type = gl.GL_FLOAT,
-		loc = self.drawShader.attrs.vtx.loc,
-		buffer = self.vtxBuffer,
-	}
-
-	self.drawShaderVertexArray = GLVertexArray{
-		self.drawShaderVtxAttr,
+	
+		attrs = {
+			vtx = self.vtxBuffer,
+		},
 	}
 
 
@@ -240,9 +225,9 @@ function App:update()
 			gl.glUniformMatrix4fv(self.updateShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.projectionMatrix.ptr)	-- modelview is ident, so just use projection
 			self.noise:prev():bind()
 			
-			self.updateShaderVertexArray:bind()
+			self.updateShader.vao:use()
 			gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-			self.updateShaderVertexArray:unbind()
+			self.updateShader.vao:useNone()
 
 			self.noise:prev():unbind()
 			self.updateShader:useNone()
@@ -260,9 +245,9 @@ function App:update()
 	gl.glUniformMatrix4fv(self.drawShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.modelViewProjectionMatrix.ptr)
 	self.state:prev():bind()
 	
-	self.drawShaderVertexArray:bind()
+	self.drawShader.vao:use()
 	gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-	self.drawShaderVertexArray:unbind()
+	self.drawShader.vao:useNone()
 	
 	self.drawShader:useNone()
 glreport'here'
