@@ -84,8 +84,8 @@ function App:initGL(...)
 	self.updateShader = GLProgram{
 		vertexCode = [[
 #version 460
-attribute vec2 vtx;
-varying vec2 tc;
+in vec2 vtx;
+out vec2 tc;
 uniform mat4 modelViewProjectionMatrix;
 void main() {
 	tc = vtx.xy;
@@ -94,7 +94,7 @@ void main() {
 ]],
 		fragmentCode = template([[
 #version 460
-varying vec2 tc;
+out vec2 tc;
 uniform sampler2D noiseTex;
 
 #if 0	//rotation
@@ -135,7 +135,7 @@ vec2 field(vec2 x) {
 
 out vec4 fragColor;
 void main() {
-	float l = texture2D(noiseTex, tc).r;
+	float l = texture(noiseTex, tc).r;
 
 	<? for dir=-1,1,2 do ?>{
 		vec2 r  = tc;
@@ -144,7 +144,7 @@ void main() {
 			float k = smoothstep(1, 0, f);
 			vec2 dr_ds = normalize(field(r));
 			r += dr_ds * <?=ds * dir?>;
-			l += texture2D(noiseTex, r).r;
+			l += texture(noiseTex, r).r;
 		}
 	}<? end ?>
 
@@ -174,8 +174,8 @@ void main() {
 	self.drawShader = GLProgram{
 		vertexCode = [[
 #version 460
-attribute vec2 vtx;
-varying vec2 tc;
+in vec2 vtx;
+out vec2 tc;
 uniform mat4 modelViewProjectionMatrix;
 void main() {
 	tc = vtx.xy;
@@ -184,11 +184,11 @@ void main() {
 ]],
 		fragmentCode = [[
 #version 460
-varying vec2 tc;
+out vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
 void main() {
-	float l = texture2D(stateTex, tc).r;
+	float l = texture(stateTex, tc).r;
 	fragColor = vec4(l, l, l, 1.);
 }
 ]],
