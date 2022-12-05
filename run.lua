@@ -94,7 +94,7 @@ void main() {
 ]],
 		fragmentCode = template([[
 #version 460
-out vec2 tc;
+in vec2 tc;
 uniform sampler2D noiseTex;
 
 #if 0	//rotation
@@ -184,7 +184,7 @@ void main() {
 ]],
 		fragmentCode = [[
 #version 460
-out vec2 tc;
+in vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
 void main() {
