@@ -202,9 +202,9 @@ void main() {
 	}
 
 
-	self.modelViewMatrix = matrix_ffi.zeros(4,4)
-	self.projectionMatrix = matrix_ffi.zeros(4,4)
-	self.modelViewProjectionMatrix = matrix_ffi.zeros(4,4)
+	self.modelViewMatrix = matrix_ffi.zeros{4,4}
+	self.projectionMatrix = matrix_ffi.zeros{4,4}
+	self.modelViewProjectionMatrix = matrix_ffi.zeros{4,4}
 
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
