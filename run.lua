@@ -168,7 +168,7 @@ void main() {
 		attrs = {
 			vtx = self.vtxBuffer,
 		},
-	}
+	}:useNone()
 
 
 	self.drawShader = GLProgram{
@@ -199,7 +199,7 @@ void main() {
 		attrs = {
 			vtx = self.vtxBuffer,
 		},
-	}
+	}:useNone()
 
 
 	self.modelViewMatrix = matrix_ffi.zeros{4,4}
