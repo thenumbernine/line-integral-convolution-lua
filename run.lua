@@ -79,7 +79,7 @@ function App:initGL(...)
 		1, 1,
 	}
 	self.vtxBufferCount = #vtxs / self.vtxBufferDim
-	self.vtxBuffer = GLArrayBuffer{data = vtxs}
+	self.vtxBuffer = GLArrayBuffer{data = vtxs}:unbind()
 
 	self.updateShader = GLProgram{
 		vertexCode = [[
