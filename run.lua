@@ -12,6 +12,8 @@ local GLArrayBuffer = require 'gl.arraybuffer'
 local GLAttribute = require 'gl.attribute'
 local GLVertexArray = require 'gl.vertexarray'
 local GLProgram = require 'gl.program'
+local GLGeometry = require 'gl.geometry'
+local GLSceneObject = require 'gl.sceneobject'
 local GLPingPong = require 'gl.pingpong'
 local clnumber = require 'cl.obj.number'
 local Image = require 'image'
@@ -86,10 +88,10 @@ function App:initGL(...)
 #version 460
 in vec2 vtx;
 out vec2 tc;
-uniform mat4 modelViewProjectionMatrix;
+uniform mat4 mvProjMat;
 void main() {
 	tc = vtx.xy;
-	gl_Position = modelViewProjectionMatrix * vec4(vtx, 0., 1.);
+	gl_Position = mvProjMat * vec4(vtx, 0., 1.);
 }
 ]],
 		fragmentCode = template([[
@@ -164,22 +166,30 @@ void main() {
 		uniforms = {
 			noiseTex = 0,
 		},
+	}:useNone()
 
+	self.quadGeom = GLGeometry{
+		mode = gl.GL_TRIANGLE_STRIP,
+		count = self.vtxBufferCount,
+	}
+
+	self.updateSceneObj = GLSceneObject{
+		program = self.updateShader,
+		geometry = self.quadGeom,
 		attrs = {
 			vtx = self.vtxBuffer,
 		},
-	}:useNone()
-
+	}
 
 	self.drawShader = GLProgram{
 		vertexCode = [[
 #version 460
 in vec2 vtx;
 out vec2 tc;
-uniform mat4 modelViewProjectionMatrix;
+uniform mat4 mvProjMat;
 void main() {
 	tc = vtx.xy;
-	gl_Position = modelViewProjectionMatrix * vec4(vtx.xy, 0., 1.);
+	gl_Position = mvProjMat * vec4(vtx.xy, 0., 1.);
 }
 ]],
 		fragmentCode = [[
@@ -195,16 +205,20 @@ void main() {
 		uniforms = {
 			stateTex = 0,
 		},
-	
+	}:useNone()
+
+	self.drawSceneObj = GLSceneObject{
+		program = self.drawShader,
+		geometry = self.quadGeom,
 		attrs = {
 			vtx = self.vtxBuffer,
 		},
-	}:useNone()
+	}
 
 
-	self.modelViewMatrix = matrix_ffi.zeros{4,4}
-	self.projectionMatrix = matrix_ffi.zeros{4,4}
-	self.modelViewProjectionMatrix = matrix_ffi.zeros{4,4}
+	self.mvMat = matrix_ffi.zeros{4,4}
+	self.projMat = matrix_ffi.zeros{4,4}
+	self.mvProjMat = matrix_ffi.zeros{4,4}
 
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
@@ -220,36 +234,24 @@ function App:update()
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			
-			gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projectionMatrix.ptr)
-			self.updateShader:use()
-			gl.glUniformMatrix4fv(self.updateShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.projectionMatrix.ptr)	-- modelview is ident, so just use projection
-			self.noise:prev():bind()
-			
-			self.updateShader.vao:use()
-			gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-			self.updateShader.vao:useNone()
-
-			self.noise:prev():unbind()
-			self.updateShader:useNone()
+			gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projMat.ptr)
+			self.updateSceneObj.texs[1] = self.noise:prev()
+			self.updateSceneObj.uniforms.mvProjMat = self.projMat.ptr	-- modelview is ident, so just use projection
+			self.updateSceneObj:draw()
 		end,
 	}
 	self.state:swap()
 	self.noise:swap()
 	gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 
-	gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX, self.modelViewMatrix.ptr)
-	gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projectionMatrix.ptr)
-	self.modelViewProjectionMatrix:mul(self.projectionMatrix, self.modelViewMatrix)
+	gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX, self.mvMat.ptr)
+	gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projMat.ptr)
+	self.mvProjMat:mul(self.projMat, self.mvMat)
 
-	self.drawShader:use()
-	gl.glUniformMatrix4fv(self.drawShader.uniforms.modelViewProjectionMatrix.loc, 1, 0, self.modelViewProjectionMatrix.ptr)
-	self.state:prev():bind()
+	self.drawSceneObj.texs[1] = self.state:prev()
+	self.drawSceneObj.uniforms.mvProjMat = self.mvProjMat.ptr
+	self.drawSceneObj:draw()
 	
-	self.drawShader.vao:use()
-	gl.glDrawArrays(gl.GL_TRIANGLE_STRIP, 0, self.vtxBufferCount)
-	self.drawShader.vao:useNone()
-	
-	self.drawShader:useNone()
 glreport'here'
 end
 
