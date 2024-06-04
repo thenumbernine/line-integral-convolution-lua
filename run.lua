@@ -20,6 +20,8 @@ local Image = require 'image'
 
 matrix_ffi.real = 'float'
 
+require 'glapp.view'.useBuiltinMatrixMath = true
+
 local App = require 'imguiapp.withorbit'()
 
 App.title = 'LIC'
@@ -30,6 +32,8 @@ function App:initGL(...)
 	self.view.ortho = true 
 	self.view.orthoSize = .5
 	self.view.pos:set(.5, .5, 10)
+
+	self.pingPongProjMat = matrix_ffi{4,4}:zeros():setOrtho(0, 1, 0, 1, 0, 1)
 
 	self.stateSize = 1024
 	self.state = GLPingPong{
@@ -215,28 +219,20 @@ void main() {
 		},
 	}
 
-
-	self.mvMat = matrix_ffi.zeros{4,4}
-	self.projMat = matrix_ffi.zeros{4,4}
-	self.mvProjMat = matrix_ffi.zeros{4,4}
-
-
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glEnable(gl.GL_CULL_FACE)
 end
 
 function App:update()
 	App.super.update(self)
-
 	self.state:draw{
 		viewport = {0, 0, self.stateSize, self.stateSize},
 		resetProjection = true,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			
-			gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projMat.ptr)
 			self.updateSceneObj.texs[1] = self.noise:prev()
-			self.updateSceneObj.uniforms.mvProjMat = self.projMat.ptr	-- modelview is ident, so just use projection
+			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
 			self.updateSceneObj:draw()
 		end,
 	}
@@ -244,14 +240,10 @@ function App:update()
 	self.noise:swap()
 	gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 
-	gl.glGetFloatv(gl.GL_MODELVIEW_MATRIX, self.mvMat.ptr)
-	gl.glGetFloatv(gl.GL_PROJECTION_MATRIX, self.projMat.ptr)
-	self.mvProjMat:mul(self.projMat, self.mvMat)
-
 	self.drawSceneObj.texs[1] = self.state:prev()
-	self.drawSceneObj.uniforms.mvProjMat = self.mvProjMat.ptr
+	self.drawSceneObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
 	self.drawSceneObj:draw()
-	
+
 glreport'here'
 end
 
