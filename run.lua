@@ -29,7 +29,7 @@ App.title = 'LIC'
 function App:initGL(...)
 	App.super.initGL(self, ...)
 
-	self.view.ortho = true 
+	self.view.ortho = true
 	self.view.orthoSize = .5
 	self.view.pos:set(.5, .5, 10)
 
@@ -88,8 +88,9 @@ function App:initGL(...)
 	self.vtxBuffer = GLArrayBuffer{data = vtxs}:unbind()
 
 	self.updateShader = GLProgram{
-		vertexCode = [[
-#version 460
+		vertexCode =
+GLProgram.getVersionPragma()..'\n'
+..[[
 in vec2 vtx;
 out vec2 tc;
 uniform mat4 mvProjMat;
@@ -98,8 +99,9 @@ void main() {
 	gl_Position = mvProjMat * vec4(vtx, 0., 1.);
 }
 ]],
-		fragmentCode = template([[
-#version 460
+		fragmentCode = template(
+GLProgram.getVersionPragma()..'\n'
+..[[
 in vec2 tc;
 uniform sampler2D noiseTex;
 
@@ -121,7 +123,7 @@ vec2 field(vec2 x) {
 	//return EField(x - vec2(.5, .5));	// one charge in the middle
 	//n along a unit circle
 	vec2 E = vec2(0,0);
-<? 
+<?
 local n = 6
 for i=0,n-1 do
 	local q = i%2==0 and 1 or -1
@@ -166,7 +168,7 @@ void main() {
 				ds = clnumber(1 / self.noiseSize),
 				maxiter = 9,
 			}),
-		
+
 		uniforms = {
 			noiseTex = 0,
 		},
@@ -186,8 +188,9 @@ void main() {
 	}
 
 	self.drawShader = GLProgram{
-		vertexCode = [[
-#version 460
+		vertexCode =
+GLProgram.getVersionPragma()..'\n'
+..[[
 in vec2 vtx;
 out vec2 tc;
 uniform mat4 mvProjMat;
@@ -196,8 +199,9 @@ void main() {
 	gl_Position = mvProjMat * vec4(vtx.xy, 0., 1.);
 }
 ]],
-		fragmentCode = [[
-#version 460
+		fragmentCode =
+GLProgram.getVersionPragma()..'\n'
+..[[
 in vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
@@ -230,7 +234,7 @@ function App:update()
 		resetProjection = true,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
-			
+
 			self.updateSceneObj.texs[1] = self.noise:prev()
 			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
 			self.updateSceneObj:draw()
