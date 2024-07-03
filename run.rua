@@ -229,7 +229,7 @@ App.update = [:] do
 		viewport = {0, 0, self.stateSize, self.stateSize},
 		resetProjection = true,
 		callback = [] do
-			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
+			gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
 			self.updateSceneObj.texs[1] = self.noise:prev()
 			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
@@ -238,7 +238,7 @@ App.update = [:] do
 	}
 	self.state:swap()
 	self.noise:swap()
-	gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
+	gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
 	self.drawSceneObj.texs[1] = self.state:prev()
 	self.drawSceneObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
