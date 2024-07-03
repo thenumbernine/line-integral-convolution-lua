@@ -1,6 +1,4 @@
-#!/usr/bin/env luajit
-local class = require 'ext.class'
-local table = require 'ext.table'
+#!/usr/bin/env rua
 local matrix_ffi = require 'matrix.ffi'
 local bit = require 'bit'
 local ffi = require 'ffi'
@@ -26,7 +24,7 @@ local App = require 'imguiapp.withorbit'()
 
 App.title = 'LIC'
 
-function App:initGL(...)
+App.initGL = [:,...] do
 	App.super.initGL(self, ...)
 
 	self.view.ortho = true
@@ -227,12 +225,12 @@ void main() {
 	gl.glEnable(gl.GL_CULL_FACE)
 end
 
-function App:update()
+App.update = [:] do
 	App.super.update(self)
 	self.state:draw{
 		viewport = {0, 0, self.stateSize, self.stateSize},
 		resetProjection = true,
-		callback = function()
+		callback = [] do
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 
 			self.updateSceneObj.texs[1] = self.noise:prev()
