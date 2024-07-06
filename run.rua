@@ -123,7 +123,7 @@ vec2 field(vec2 x) {
 <?
 local n = 6
 for i=0,n-1 do
-	local q = i%2==0 and 1 or -1
+	local q = ((i & 1) << 1) - 1
 	local theta = 2*math.pi*i/n
 	local cx = math.cos(theta)
 	local cy = math.sin(theta)
