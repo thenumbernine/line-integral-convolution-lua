@@ -1,7 +1,5 @@
 #!/usr/bin/env rua
 local matrix_ffi = require 'matrix.ffi'
-local bit = require 'bit'
-local ffi = require 'ffi'
 local template = require 'template'
 local gl = require 'gl'
 local glreport = require 'gl.report'

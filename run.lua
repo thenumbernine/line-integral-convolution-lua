@@ -1,9 +1,9 @@
 #!/usr/bin/env luajit
 local class = require 'ext.class'
 local table = require 'ext.table'
-local matrix_ffi = require 'matrix.ffi'
-local bit = require 'bit'
 local ffi = require 'ffi'
+local bit = require 'bit'
+local matrix_ffi = require 'matrix.ffi'
 local template = require 'template'
 local gl = require 'gl'
 local glreport = require 'gl.report'
@@ -66,9 +66,8 @@ function App:initGL(...)
 	local image = Image(self.noiseSize, self.noiseSize, 4, 'float')
 	for i=1,#self.noise.hist do
 		for i=0,self.noiseSize*self.noiseSize-1 do
-			local l = math.floor(math.random(0,3)/3)
 			for j=0,3 do
-				image.buffer[j+4*i] = l
+				image.buffer[j+4*i] = math.random()^3
 			end
 		end
 		self.noise.hist[i]
@@ -126,7 +125,7 @@ vec2 field(vec2 x) {
 <?
 local n = 6
 for i=0,n-1 do
-	local q = i%2==0 and 1 or -1
+	local q = (i % 2) * 2 - 1
 	local theta = 2*math.pi*i/n
 	local cx = math.cos(theta)
 	local cy = math.sin(theta)
@@ -143,7 +142,7 @@ vec2 field(vec2 x) {
 
 out vec4 fragColor;
 void main() {
-	float l = texture(noiseTex, tc).r;
+	vec3 c = texture(noiseTex, tc).rgb;
 
 	<? for dir=-1,1,2 do ?>{
 		vec2 r  = tc;
@@ -152,16 +151,16 @@ void main() {
 			float k = smoothstep(1, 0, f);
 			vec2 dr_ds = normalize(field(r));
 			r += dr_ds * <?=ds * dir?>;
-			l += texture(noiseTex, r).r;
+			c += texture(noiseTex, r).rgb;
 		}
 	}<? end ?>
 
-	l *= <?=clnumber(1/(2*maxiter+1))?>;
+	c *= <?=clnumber(1/(2*maxiter+1))?>;
 
 	//add some contract
-	l = smoothstep(-.1, .8, l);
+	c = smoothstep(-.1, .8, c);
 
-	fragColor = vec4(l,l,l, 1.);
+	fragColor = vec4(c, 1.);
 }
 ]],			{
 				clnumber = clnumber,
@@ -206,8 +205,7 @@ in vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
 void main() {
-	float l = texture(stateTex, tc).r;
-	fragColor = vec4(l, l, l, 1.);
+	fragColor = vec4(texture(stateTex, tc).rgb, 1.);
 }
 ]],
 		uniforms = {
