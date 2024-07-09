@@ -229,10 +229,8 @@ function App:update()
 	App.super.update(self)
 	self.state:draw{
 		viewport = {0, 0, self.stateSize, self.stateSize},
-		resetProjection = true,
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
-
 			self.updateSceneObj.texs[1] = self.noise:prev()
 			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
 			self.updateSceneObj:draw()
