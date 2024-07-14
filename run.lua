@@ -1,11 +1,10 @@
 #!/usr/bin/env luajit
-local class = require 'ext.class'
-local table = require 'ext.table'
+local gl = require 'gl.setup' (... or 'OpenGL')
+--local gl = require 'gl.setup' (... or 'OpenGLES3')	-- but I'm still using smoothstep() in the GLSL ...
 local ffi = require 'ffi'
 local bit = require 'bit'
 local matrix_ffi = require 'matrix.ffi'
 local template = require 'template'
-local gl = require 'gl'
 local glreport = require 'gl.report'
 local GLTex2D = require 'gl.tex2d'
 local GLArrayBuffer = require 'gl.arraybuffer'
@@ -18,12 +17,8 @@ local GLPingPong = require 'gl.pingpong'
 local clnumber = require 'cl.obj.number'
 local Image = require 'image'
 
-matrix_ffi.real = 'float'
-
-require 'glapp.view'.useBuiltinMatrixMath = true
-
 local App = require 'imguiapp.withorbit'()
-
+App.viewUseBuiltinMatrixMath = true
 App.title = 'LIC'
 
 function App:initGL(...)
@@ -33,7 +28,7 @@ function App:initGL(...)
 	self.view.orthoSize = .5
 	self.view.pos:set(.5, .5, 10)
 
-	self.pingPongProjMat = matrix_ffi{4,4}:zeros():setOrtho(0, 1, 0, 1, 0, 1)
+	self.pingPongProjMat = matrix_ffi({4,4}, 'float'):zeros():setOrtho(0, 1, 0, 1, 0, 1)
 
 	self.stateSize = 1024
 	self.state = GLPingPong{
@@ -87,9 +82,9 @@ function App:initGL(...)
 	self.vtxBuffer = GLArrayBuffer{data = vtxs}:unbind()
 
 	self.updateShader = GLProgram{
-		vertexCode =
-GLProgram.getVersionPragma()..'\n'
-..[[
+		version = 'latest',
+		header = 'precision highp float;',
+		vertexCode = [[
 in vec2 vtx;
 out vec2 tc;
 uniform mat4 mvProjMat;
@@ -98,9 +93,7 @@ void main() {
 	gl_Position = mvProjMat * vec4(vtx, 0., 1.);
 }
 ]],
-		fragmentCode = template(
-GLProgram.getVersionPragma()..'\n'
-..[[
+		fragmentCode = template([[
 in vec2 tc;
 uniform sampler2D noiseTex;
 
@@ -187,9 +180,9 @@ void main() {
 	}
 
 	self.drawShader = GLProgram{
-		vertexCode =
-GLProgram.getVersionPragma()..'\n'
-..[[
+		version = 'latest',
+		header = 'precision highp float;',
+		vertexCode = [[
 in vec2 vtx;
 out vec2 tc;
 uniform mat4 mvProjMat;
@@ -198,9 +191,7 @@ void main() {
 	gl_Position = mvProjMat * vec4(vtx.xy, 0., 1.);
 }
 ]],
-		fragmentCode =
-GLProgram.getVersionPragma()..'\n'
-..[[
+		fragmentCode = [[
 in vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
