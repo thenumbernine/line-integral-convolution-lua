@@ -82,7 +82,12 @@ function App:initGL(...)
 	self.vtxBuffer = GLArrayBuffer{data = vtxs}:unbind()
 
 	self.updateShader = GLProgram{
-		version = 'latest',
+		--version = 'latest',
+		
+		-- TODO how to make this version for non-es and es both
+		-- and TODO how to pick a higher version and use builtin smoothstep when its available ...
+		version = '300 es',
+
 		header = 'precision highp float;',
 		vertexCode = [[
 in vec2 vtx;
@@ -96,6 +101,20 @@ void main() {
 		fragmentCode = template([[
 in vec2 tc;
 uniform sampler2D noiseTex;
+
+//https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml 
+float smoothstep_float(float edge0, float edge1, float x) {
+	float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+	return t * t * (3.0 - 2.0 * t);
+}
+vec3 smoothstep_float_float_vec3(float edge0, float edge1, vec3 x) {
+	vec3 t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+	return vec3(
+		t.x * t.x * (3.0 - 2.0 * t.x),
+		t.y * t.y * (3.0 - 2.0 * t.y),
+		t.z * t.z * (3.0 - 2.0 * t.z)
+	);
+}
 
 #if 0	//rotation
 vec2 field(vec2 x) {
@@ -141,7 +160,7 @@ void main() {
 		vec2 r  = tc;
 		for (int iter = 0; iter < <?=maxiter?>; ++iter) {
 			float f = float(iter + 1) * <?=clnumber(1/(maxiter+1))?>;
-			float k = smoothstep(1, 0, f);
+			float k = smoothstep_float(1., 0., f);
 			vec2 dr_ds = normalize(field(r));
 			r += dr_ds * <?=ds * dir?>;
 			c += texture(noiseTex, r).rgb;
@@ -151,7 +170,7 @@ void main() {
 	c *= <?=clnumber(1/(2*maxiter+1))?>;
 
 	//add some contract
-	c = smoothstep(-.1, .8, c);
+	c = smoothstep_float_float_vec3(-.1, .8, c);
 
 	fragColor = vec4(c, 1.);
 }
