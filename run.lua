@@ -1,6 +1,5 @@
 #!/usr/bin/env luajit
 local gl = require 'gl.setup' (... or 'OpenGL')
---local gl = require 'gl.setup' (... or 'OpenGLES3')	-- but I'm still using smoothstep() in the GLSL ...
 local ffi = require 'ffi'
 local bit = require 'bit'
 local matrix_ffi = require 'matrix.ffi'
@@ -153,8 +152,9 @@ vec2 field(vec2 x) {
 #endif
 
 out vec4 fragColor;
+uniform vec2 offset;
 void main() {
-	vec3 c = texture(noiseTex, tc).rgb;
+	vec3 c = texture(noiseTex, tc + offset).rgb;
 
 	<? for dir=-1,1,2 do ?>{
 		vec2 r  = tc;
@@ -163,7 +163,7 @@ void main() {
 			float k = smoothstep_float(1., 0., f);
 			vec2 dr_ds = normalize(field(r));
 			r += dr_ds * <?=ds * dir?>;
-			c += texture(noiseTex, r).rgb;
+			c += texture(noiseTex, r + offset).rgb;
 		}
 	}<? end ?>
 
@@ -237,15 +237,19 @@ end
 
 function App:update()
 	App.super.update(self)
+	gl.glViewport(0, 0, self.stateSize, self.stateSize)
 	self.state:draw{
-		viewport = {0, 0, self.stateSize, self.stateSize},
+		--viewport = {},
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			self.updateSceneObj.texs[1] = self.noise:prev()
 			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
+			self.updateSceneObj.uniforms.offset = {math.random(), math.random()}
 			self.updateSceneObj:draw()
 		end,
 	}
+	gl.glViewport(0, 0, self.width, self.height)
+
 	self.state:swap()
 	self.noise:swap()
 	gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
