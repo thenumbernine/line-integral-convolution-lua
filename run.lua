@@ -1,15 +1,10 @@
 #!/usr/bin/env luajit
-local gl = require 'gl.setup' (... or 'OpenGL')
 local ffi = require 'ffi'
 local bit = require 'bit'
+local gl = require 'gl.setup' (... or 'OpenGL')
 local matrix_ffi = require 'matrix.ffi'
 local template = require 'template'
 local glreport = require 'gl.report'
-local GLTex2D = require 'gl.tex2d'
-local GLArrayBuffer = require 'gl.arraybuffer'
-local GLAttribute = require 'gl.attribute'
-local GLVertexArray = require 'gl.vertexarray'
-local GLProgram = require 'gl.program'
 local GLGeometry = require 'gl.geometry'
 local GLSceneObject = require 'gl.sceneobject'
 local GLPingPong = require 'gl.pingpong'
@@ -70,34 +65,33 @@ function App:initGL(...)
 			:unbind()
 	end
 
-	self.vtxBufferDim = 2
-	local vtxs = {
-		0, 0,
-		1, 0,
-		0, 1,
-		1, 1,
+	self.quadGeom = GLGeometry{
+		mode = gl.GL_TRIANGLE_STRIP,
+		vertexes = {
+			data = {
+				0, 0,
+				1, 0,
+				0, 1,
+				1, 1,
+			},
+			dim = 2,
+		},
 	}
-	self.vtxBufferCount = #vtxs / self.vtxBufferDim
-	self.vtxBuffer = GLArrayBuffer{data = vtxs}:unbind()
 
-	self.updateShader = GLProgram{
-		--version = 'latest',
-		
-		-- TODO how to make this version for non-es and es both
-		-- and TODO how to pick a higher version and use builtin smoothstep when its available ...
-		version = '300 es',
-
-		header = 'precision highp float;',
-		vertexCode = [[
-in vec2 vtx;
+	self.updateSceneObj = GLSceneObject{
+		program = {
+			version = 'latest',
+			header = 'precision highp float;',
+			vertexCode = [[
+in vec2 vertex;
 out vec2 tc;
 uniform mat4 mvProjMat;
 void main() {
-	tc = vtx.xy;
-	gl_Position = mvProjMat * vec4(vtx, 0., 1.);
+	tc = vertex.xy;
+	gl_Position = mvProjMat * vec4(vertex, 0., 1.);
 }
 ]],
-		fragmentCode = template([[
+			fragmentCode = template([[
 in vec2 tc;
 uniform sampler2D noiseTex;
 
@@ -179,38 +173,27 @@ void main() {
 				ds = clnumber(1 / self.noiseSize),
 				maxiter = 9,
 			}),
-
-		uniforms = {
-			noiseTex = 0,
+			uniforms = {
+				noiseTex = 0,
+			},
 		},
-	}:useNone()
-
-	self.quadGeom = GLGeometry{
-		mode = gl.GL_TRIANGLE_STRIP,
-		count = self.vtxBufferCount,
-	}
-
-	self.updateSceneObj = GLSceneObject{
-		program = self.updateShader,
 		geometry = self.quadGeom,
-		attrs = {
-			vtx = self.vtxBuffer,
-		},
 	}
 
-	self.drawShader = GLProgram{
-		version = 'latest',
-		header = 'precision highp float;',
-		vertexCode = [[
-in vec2 vtx;
+	self.drawSceneObj = GLSceneObject{
+		program = {
+			version = 'latest',
+			header = 'precision highp float;',
+			vertexCode = [[
+in vec2 vertex;
 out vec2 tc;
 uniform mat4 mvProjMat;
 void main() {
-	tc = vtx.xy;
-	gl_Position = mvProjMat * vec4(vtx.xy, 0., 1.);
+	tc = vertex.xy;
+	gl_Position = mvProjMat * vec4(vertex.xy, 0., 1.);
 }
 ]],
-		fragmentCode = [[
+			fragmentCode = [[
 in vec2 tc;
 uniform sampler2D stateTex;
 out vec4 fragColor;
@@ -218,17 +201,11 @@ void main() {
 	fragColor = vec4(texture(stateTex, tc).rgb, 1.);
 }
 ]],
-		uniforms = {
-			stateTex = 0,
+			uniforms = {
+				stateTex = 0,
+			},
 		},
-	}:useNone()
-
-	self.drawSceneObj = GLSceneObject{
-		program = self.drawShader,
 		geometry = self.quadGeom,
-		attrs = {
-			vtx = self.vtxBuffer,
-		},
 	}
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
@@ -237,9 +214,8 @@ end
 
 function App:update()
 	App.super.update(self)
-	gl.glViewport(0, 0, self.stateSize, self.stateSize)
 	self.state:draw{
-		--viewport = {},
+		viewport = {0, 0, self.stateSize, self.stateSize},
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			self.updateSceneObj.texs[1] = self.noise:prev()
@@ -248,7 +224,6 @@ function App:update()
 			self.updateSceneObj:draw()
 		end,
 	}
-	gl.glViewport(0, 0, self.width, self.height)
 
 	self.state:swap()
 	self.noise:swap()
