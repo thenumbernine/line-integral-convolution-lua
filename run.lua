@@ -214,9 +214,8 @@ end
 
 function App:update()
 	App.super.update(self)
-	gl.glViewport(0, 0, self.stateSize, self.stateSize)
 	self.state:draw{
-		--viewport = {0, 0, self.stateSize, self.stateSize},
+		viewport = {0, 0, self.stateSize, self.stateSize},
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			self.updateSceneObj.texs[1] = self.noise:prev()
@@ -225,7 +224,6 @@ function App:update()
 			self.updateSceneObj:draw()
 		end,
 	}
-	gl.glViewport(0, 0, self.width, self.height)
 
 	self.state:swap()
 	self.noise:swap()
