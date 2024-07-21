@@ -14,6 +14,6 @@ dependencies = {
 build = {
 	type = "builtin",
 	modules = {
-		run = "run.lua"
+		["line-integral-convolution.run"] = "run.lua"
 	}
 }
