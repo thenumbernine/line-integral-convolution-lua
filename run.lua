@@ -81,7 +81,7 @@ function App:initGL(...)
 	self.updateSceneObj = GLSceneObject{
 		program = {
 			version = 'latest',
-			header = 'precision highp float;',
+			precision = 'best',
 			vertexCode = [[
 in vec2 vertex;
 out vec2 tc;
@@ -183,7 +183,7 @@ void main() {
 	self.drawSceneObj = GLSceneObject{
 		program = {
 			version = 'latest',
-			header = 'precision highp float;',
+			precision = 'best',
 			vertexCode = [[
 in vec2 vertex;
 out vec2 tc;
