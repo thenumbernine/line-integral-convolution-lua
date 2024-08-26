@@ -12,7 +12,6 @@ local clnumber = require 'cl.obj.number'
 local Image = require 'image'
 
 local App = require 'imguiapp.withorbit'()
-App.viewUseBuiltinMatrixMath = true
 App.title = 'LIC'
 
 function App:initGL(...)
