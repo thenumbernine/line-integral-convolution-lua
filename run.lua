@@ -11,7 +11,7 @@ local GLPingPong = require 'gl.pingpong'
 local clnumber = require 'cl.obj.number'
 local Image = require 'image'
 
-local App = require 'imguiapp.withorbit'()
+local App = require 'imgui.appwithorbit'()
 App.title = 'LIC'
 
 function App:initGL(...)
