@@ -1,0 +1,17 @@
+name = "line-integral-convolution"
+files = {
+	["README.md"] = "line-integral-convolution/README.md",
+	["line-integral-convolution-dev-1.rockspec"] = "line-integral-convolution/line-integral-convolution-dev-1.rockspec",
+	["pic.png"] = "line-integral-convolution/pic.png",
+	["run.lua"] = "line-integral-convolution/run.lua",
+	["run.rua"] = "line-integral-convolution/run.rua",
+}
+deps = {
+	"bit",
+	"cl",
+	"gl",
+	"image",
+	"imgui",
+	"matrix",
+	"template",
+}
