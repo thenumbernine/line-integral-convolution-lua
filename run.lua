@@ -8,7 +8,7 @@ local glreport = require 'gl.report'
 local GLGeometry = require 'gl.geometry'
 local GLSceneObject = require 'gl.sceneobject'
 local GLPingPong = require 'gl.pingpong'
-local clnumber = require 'cl.obj.number'
+local glnumber = require 'gl.number'
 local Image = require 'image'
 
 local App = require 'imgui.appwithorbit'()
@@ -133,7 +133,7 @@ for i=0,n-1 do
 	local theta = 2*math.pi*i/n
 	local cx = math.cos(theta)
 	local cy = math.sin(theta)
-?>	E += <?=clnumber(q)?> * EField(x - vec2(<?=clnumber(cx)?>, <?=clnumber(cy)?>));
+?>	E += <?=glnumber(q)?> * EField(x - vec2(<?=glnumber(cx)?>, <?=glnumber(cy)?>));
 <?
 end
 ?>	return E;
@@ -152,7 +152,7 @@ void main() {
 	<? for dir=-1,1,2 do ?>{
 		vec2 r  = tc;
 		for (int iter = 0; iter < <?=maxiter?>; ++iter) {
-			float f = float(iter + 1) * <?=clnumber(1/(maxiter+1))?>;
+			float f = float(iter + 1) * <?=glnumber(1/(maxiter+1))?>;
 			float k = smoothstep_float(1., 0., f);
 			vec2 dr_ds = normalize(field(r));
 			r += dr_ds * <?=ds * dir?>;
@@ -160,7 +160,7 @@ void main() {
 		}
 	}<? end ?>
 
-	c *= <?=clnumber(1/(2*maxiter+1))?>;
+	c *= <?=glnumber(1/(2*maxiter+1))?>;
 
 	//add some contract
 	c = smoothstep_float_float_vec3(-.1, .8, c);
@@ -168,8 +168,8 @@ void main() {
 	fragColor = vec4(c, 1.);
 }
 ]],			{
-				clnumber = clnumber,
-				ds = clnumber(1 / self.noiseSize),
+				glnumber = glnumber,
+				ds = glnumber(1 / self.noiseSize),
 				maxiter = 9,
 			}),
 			uniforms = {

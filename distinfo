@@ -1,6 +1,7 @@
 name = "line-integral-convolution"
 files = {
 	["README.md"] = "line-integral-convolution/README.md",
+	["distinfo"] = "line-integral-convolution/distinfo",
 	["line-integral-convolution-dev-1.rockspec"] = "line-integral-convolution/line-integral-convolution-dev-1.rockspec",
 	["pic.png"] = "line-integral-convolution/pic.png",
 	["run.lua"] = "line-integral-convolution/run.lua",
@@ -8,7 +9,6 @@ files = {
 }
 deps = {
 	"bit",
-	"cl",
 	"gl",
 	"image",
 	"imgui",
