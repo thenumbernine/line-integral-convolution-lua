@@ -12,7 +12,7 @@ local Image = require 'image'
 local App = require 'imgui.appwithorbit'()
 App.title = 'LIC'
 
-App.initGL = [:,...] do
+App.initGL = |:,...| do
 	App.super.initGL(self, ...)
 
 	self.view.ortho = true
@@ -209,11 +209,11 @@ void main() {
 	gl.glEnable(gl.GL_CULL_FACE)
 end
 
-App.update = [:] do
+App.update = |:| do
 	App.super.update(self)
 	self.state:draw{
 		viewport = {0, 0, self.stateSize, self.stateSize},
-		callback = [] do
+		callback = || do
 			gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 			self.updateSceneObj.texs[1] = self.noise:prev()
 			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
