@@ -21,15 +21,11 @@ function App:initGL(...)
 	self.view.orthoSize = .5
 	self.view.pos:set(.5, .5, 10)
 
-	self.pingPongProjMat = matrix_ffi({4,4}, 'float'):zeros():setOrtho(0, 1, 0, 1, 0, 1)
-
 	self.stateSize = 1024
 	self.state = GLPingPong{
-		internalFormat = gl.GL_RGBA32F,
 		width = self.stateSize,
 		height = self.stateSize,
-		format = gl.GL_RGBA,
-		type = gl.GL_FLOAT,
+		internalFormat = gl.GL_RGBA32F,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
 		-- no need for pingpong -- no state needed
@@ -41,11 +37,9 @@ function App:initGL(...)
 	--self.noiseSize = 512
 	--self.noiseSize = 1024
 	self.noise = GLPingPong{
-		internalFormat = gl.GL_RGBA32F,
 		width = self.noiseSize,
 		height = self.noiseSize,
-		format = gl.GL_RGBA,
-		type = gl.GL_FLOAT,
+		internalFormat = gl.GL_RGBA32F,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_LINEAR,
 		-- set this to 1 for a static image
@@ -84,10 +78,9 @@ function App:initGL(...)
 			vertexCode = [[
 in vec2 vertex;
 out vec2 tc;
-uniform mat4 mvProjMat;
 void main() {
 	tc = vertex.xy;
-	gl_Position = mvProjMat * vec4(vertex, 0., 1.);
+	gl_Position = vec4(vertex * 2. - 1., 0., 1.);
 }
 ]],
 			fragmentCode = template([[
@@ -96,15 +89,15 @@ uniform sampler2D noiseTex;
 
 //https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml 
 float smoothstep_float(float edge0, float edge1, float x) {
-	float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
-	return t * t * (3.0 - 2.0 * t);
+	float t = clamp((x - edge0) / (edge1 - edge0), 0., 1.);
+	return t * t * (3. - 2. * t);
 }
 vec3 smoothstep_float_float_vec3(float edge0, float edge1, vec3 x) {
-	vec3 t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+	vec3 t = clamp((x - edge0) / (edge1 - edge0), 0., 1.);
 	return vec3(
-		t.x * t.x * (3.0 - 2.0 * t.x),
-		t.y * t.y * (3.0 - 2.0 * t.y),
-		t.z * t.z * (3.0 - 2.0 * t.z)
+		t.x * t.x * (3. - 2. * t.x),
+		t.y * t.y * (3. - 2. * t.y),
+		t.z * t.z * (3. - 2. * t.z)
 	);
 }
 
@@ -218,7 +211,6 @@ function App:update()
 		callback = function()
 			gl.glClear(bit.bor(gl.GL_COLOR_BUFFER_BIT, gl.GL_DEPTH_BUFFER_BIT))
 			self.updateSceneObj.texs[1] = self.noise:prev()
-			self.updateSceneObj.uniforms.mvProjMat = self.pingPongProjMat.ptr
 			self.updateSceneObj.uniforms.offset = {math.random(), math.random()}
 			self.updateSceneObj:draw()
 		end,
