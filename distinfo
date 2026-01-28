@@ -1,11 +1,15 @@
+--------------------------------------------
+-- generated with dist/build-distinfo.rua --
+--------------------------------------------
+
 name = "line-integral-convolution"
 files = {
-	["README.md"] = "line-integral-convolution/README.md",
-	["distinfo"] = "line-integral-convolution/distinfo",
-	["line-integral-convolution-dev-1.rockspec"] = "line-integral-convolution/line-integral-convolution-dev-1.rockspec",
-	["pic.png"] = "line-integral-convolution/pic.png",
-	["run.lua"] = "line-integral-convolution/run.lua",
-	["run.rua"] = "line-integral-convolution/run.rua",
+	"README.md",
+	"distinfo",
+	"line-integral-convolution-dev-1.rockspec",
+	"pic.png",
+	"run.lua",
+	"run.rua",
 }
 deps = {
 	"bit",
