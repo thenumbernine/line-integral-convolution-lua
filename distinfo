@@ -12,10 +12,8 @@ files = {
 	"run.rua",
 }
 deps = {
-	"bit",
 	"gl",
 	"image",
 	"imgui",
-	"matrix",
 	"template",
 }

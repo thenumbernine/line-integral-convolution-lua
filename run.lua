@@ -1,8 +1,6 @@
 #!/usr/bin/env luajit
 local ffi = require 'ffi'
-local bit = require 'bit'
 local gl = require 'gl.setup' (... or 'OpenGL')
-local matrix_ffi = require 'matrix.ffi'
 local template = require 'template'
 local glreport = require 'gl.report'
 local GLGeometry = require 'gl.geometry'
