@@ -2,7 +2,6 @@
 local ffi = require 'ffi'
 local gl = require 'gl.setup' (... or 'OpenGL')
 local template = require 'template'
-local glreport = require 'gl.report'
 local GLGeometry = require 'gl.geometry'
 local GLSceneObject = require 'gl.sceneobject'
 local GLPingPong = require 'gl.pingpong'
@@ -221,8 +220,6 @@ function App:update()
 	self.drawSceneObj.texs[1] = self.state:prev()
 	self.drawSceneObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
 	self.drawSceneObj:draw()
-
-glreport'here'
 end
 
 return App():run()
